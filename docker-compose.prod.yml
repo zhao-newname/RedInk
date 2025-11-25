@@ -1,0 +1,91 @@
+version: '3.9'
+
+# 生产环境 Docker Compose 配置
+# 使用方式: docker-compose -f docker-compose.prod.yml up -d
+
+services:
+  xiaohongshu-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - node:22-alpine
+        - python:3.11-slim
+    container_name: xiaohongshu-generator-prod
+    
+    # 仅暴露到本机（需要通过反向代理访问）
+    ports:
+      - "127.0.0.1:12398:12398"
+    
+    environment:
+      # API 配置
+      GOOGLE_CLOUD_API_KEY: ${GOOGLE_CLOUD_API_KEY}
+      IMAGE_API_KEY: ${IMAGE_API_KEY}
+      TEXT_API_BASE_URL: ${TEXT_API_BASE_URL:-https://api.bltcy.ai}
+
+      # Flask 服务配置（生产环境）
+      FLASK_DEBUG: "False"
+      FLASK_HOST: 0.0.0.0
+      FLASK_PORT: 12398
+      FLASK_ENV: production
+
+      # CORS 跨域配置（生产环保议设置为具体域名）
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://yourdomain.com}
+
+      # 文件存储配置
+      OUTPUT_DIR: ${OUTPUT_DIR:-/app/output}
+      
+      # 日志级别
+      LOG_LEVEL: WARNING
+
+    volumes:
+      # 挂载配置文件（只读）
+      - ./config/image_providers.yaml:/app/image_providers.yaml:ro
+      
+      # 挂载输出目录
+      - xiaohongshu-output:/app/output
+
+      # 挂载历史数据目录
+      - xiaohongshu-history:/app/history
+
+    restart: always
+    
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:12398/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=xiaohongshu"
+
+volumes:
+  xiaohongshu-output:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./output
+
+  xiaohongshu-history:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./history
