@@ -1,0 +1,50 @@
+# Systemd 服务配置 - 用于管理 Docker 应用
+# 
+# 安装方式:
+# 1. 复制此文件到 /etc/systemd/system/xiaohongshu-docker.service
+# 2. sudo systemctl daemon-reload
+# 3. sudo systemctl enable xiaohongshu-docker.service
+# 4. sudo systemctl start xiaohongshu-docker.service
+#
+# 使用命令:
+# - 启动:     sudo systemctl start xiaohongshu-docker
+# - 停止:     sudo systemctl stop xiaohongshu-docker
+# - 重启:     sudo systemctl restart xiaohongshu-docker
+# - 状态:     sudo systemctl status xiaohongshu-docker
+# - 日志:     journalctl -u xiaohongshu-docker -f
+
+[Unit]
+Description=小红书图文生成器 Docker 服务
+Documentation=https://github.com/your-repo/xiaohongshu-generator
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=appuser
+WorkingDirectory=/home/appuser/xiaohongshu-generator
+
+# 环境变量
+EnvironmentFile=/home/appuser/xiaohongshu-generator/.env.prod
+
+# 启动命令
+ExecStart=/usr/local/bin/docker-compose -f docker-compose.prod.yml up
+
+# 停止命令
+ExecStop=/usr/local/bin/docker-compose -f docker-compose.prod.yml down
+
+# 重启策略
+Restart=always
+RestartSec=10
+
+# 日志
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=xiaohongshu-docker
+
+# 超时
+TimeoutStartSec=0
+TimeoutStopSec=120
+
+[Install]
+WantedBy=multi-user.target

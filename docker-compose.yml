@@ -1,0 +1,50 @@
+version: '3.9'
+
+services:
+  xiaohongshu-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: xiaohongshu-generator
+    ports:
+      - "${DOCKER_PORT:-12398}:12398"
+    environment:
+      # API 配置
+      GOOGLE_CLOUD_API_KEY: ${GOOGLE_CLOUD_API_KEY}
+      IMAGE_API_KEY: ${IMAGE_API_KEY}
+      TEXT_API_BASE_URL: ${TEXT_API_BASE_URL:-https://api.bltcy.ai}
+
+      # Flask 服务配置
+      FLASK_DEBUG: ${FLASK_DEBUG:-False}
+      FLASK_HOST: 0.0.0.0
+      FLASK_PORT: 12398
+
+      # CORS 跨域配置
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:12398}
+
+      # 文件存储配置
+      OUTPUT_DIR: ${OUTPUT_DIR:-/app/output}
+
+    volumes:
+      # 挂载配置文件
+      - ./config/image_providers.yaml:/app/image_providers.yaml:ro
+      
+      # 挂载输出目录（容器与主机共享生成的图片）
+      - ./output:/app/output
+
+      # 挂载历史数据目录
+      - ./history:/app/history
+
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:12398/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  output:
+    driver: local
+  history:
+    driver: local
