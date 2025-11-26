@@ -1,0 +1,52 @@
+# ==================== Runtime Stage (Frontend Pre-built) ====================
+# This Dockerfile assumes the frontend is already built in frontend/dist
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv for dependency installation
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Copy Python project files
+COPY pyproject.toml uv.lock ./
+
+# Install Python dependencies using uv
+RUN /root/.local/bin/uv sync --no-dev --no-editable
+
+# Copy backend source code
+COPY backend/ ./backend/
+
+# Copy pre-built frontend
+COPY frontend/dist ./frontend/dist
+
+# Copy config files
+COPY config/ ./config/
+
+# Create necessary directories for runtime
+RUN mkdir -p output history
+
+# Set environment variables
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Create a non-root user for security
+RUN useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:12398/api/health', timeout=5)" || exit 1
+
+# Expose port
+EXPOSE 12398
+
+# Run Flask application
+CMD ["python", "-m", "flask", "run", "--host=0.0.0.0"]

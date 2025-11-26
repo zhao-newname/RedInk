@@ -6,9 +6,11 @@ WORKDIR /app/frontend
 # Copy frontend dependencies
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
 
-# Install pnpm and dependencies
+# Install pnpm and dependencies with retry and timeout configuration
 RUN npm install -g pnpm && \
-    pnpm install --frozen-lockfile
+    npm config set retry 5 && \
+    npm config set timeout 60000 && \
+    pnpm install --frozen-lockfile --network-timeout 60000
 
 # Copy frontend source code
 COPY frontend/ .

@@ -59,6 +59,12 @@ image_providers.yaml
 # Logs
 *.log
 logs/
+docker-build.log
+docker-build-v2.log
+
+# Docker
+docker-compose.override.yml
+.docker-env
 
 # Testing
 .pytest_cache/
@@ -71,3 +77,8 @@ htmlcov/
 *.temp
 test_*.py
 debug_*.py
+
+# Backups
+*.backup
+backup/
+*.tar.gz
